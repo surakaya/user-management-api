@@ -4,7 +4,6 @@ import { AppError } from "./errors.js";
 import { createUserSchema, updateUserSchema } from "./user.schema.js";
 import { users } from "./data.js";
 import { User } from "./types.js";
-import userRouter from "./user.routes.js";
 
 const router = Router();
 
@@ -23,11 +22,11 @@ router.post("/", (req, res) => {
 
     users.push(user);
     res.status(201).json(user); // response cevabı. (201:http success), user objesini json formatında kaydet ve geri döndür.
-});
+}); 
 
 router.get("/", (req, res) => {
     res.json(users); 
-});
+}); 
 
 
 router.get("/:id", (req, res) => {
@@ -36,7 +35,7 @@ router.get("/:id", (req, res) => {
     const user = users.find((user) => user.id === id);
   
     if (!user) {
-        throw new AppError("Kullanıcı bulunamadı.", 404);
+        throw new AppError("Kullanıcı bulunamadı.", 404, "UserNotFound");
     }
   
     res.json(user);
@@ -47,7 +46,7 @@ router.get("/:id", (req, res) => {
     const user = users.find((user) => user.id ===id); 
 
     if (!user){
-       throw new AppError("kullanici bulunamadi.", 404);
+        throw new AppError("Kullanıcı bulunamadı.", 404, "UserNotFound");
     }
     const result = updateUserSchema.safeParse(req.body);
 
@@ -65,13 +64,13 @@ router.get("/:id", (req, res) => {
     users[index] = updateUser;
     res.json(updateUser);
 
-});
+}); 
 
 router.delete("/:id", (req, res) => {
     const id = req.params.id;
     const index = users.findIndex((user) => user.id === id);
     if (index == -1){
-        throw new AppError("Kullanıcı bulunamadı.", 404);
+        throw new AppError("Kullanıcı bulunamadı.", 404, "UserNotFound");
     }
     users.splice(index,1);
     res.status(204).send();
