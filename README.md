@@ -28,7 +28,6 @@ Express ve TypeScript kullanılarak backend temellerini öğrenmek amacıyla gel
 ```bash
 npm install
 npm run dev
-npm test
 ```
 
 ## API varsayılan olarak;

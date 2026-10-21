@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "test": "tsc --noEmit"
+    "dev": "tsx watch src/server.ts"
   },
   "keywords": [],
   "author": "",
