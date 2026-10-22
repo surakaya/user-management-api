@@ -2,6 +2,28 @@
 
 Express.js ve TypeScript kullanılarak geliştirilmiş, kullanıcı yönetimi için REST API sunan bir backend projesidir. Proje; veri doğrulama, merkezi hata yönetimi, otomatik testler, Docker ile container ortamında çalıştırma ve CI/CD süreçlerini uygulamalı olarak öğrenmek amacıyla geliştirilmiştir.
 
+## Dağıtım (Deployment)
+
+API, [Render]([https://render.com/](https://user-management-api-g44x.onrender.com)) platformunda yayınlanmıştır.
+
+Uygulama, Render servisi çalışır durumdayken kendisine ait URL üzerinden erişilebilir.
+
+### Dağıtım Sonrası Kontroller
+
+Yayınlanan uygulamanın erişilebilir ve çalışır durumda olduğunu kontrol etmek için aşağıdaki endpoint'ler kullanılabilir:
+
+- `GET /health` — uygulamanın sağlık kontrolü endpoint'ini kontrol eder. 
+- `GET /users` — kullanıcı API'sinin yanıt verdiğini doğrular.
+
+Bu kontroller, dağıtılan uygulamanın erişilebilir olduğunu ve beklenen şekilde yanıt verdiğini doğrulamaya yardımcı olur.
+
+### Önemli Notlar
+
+- Kullanıcı verileri bellekte tutulur. Sunucu yeniden başlatıldığında bu veriler kaybolabilir.
+- Render servisi, ihtiyaç duyulmadığında geçici olarak durdurulabilir.
+- Servis durdurulduğunda herkese açık API adresine erişilemeyebilir.
+
+
 ## Features
 
 - RESTful API ile kullanıcı oluşturma, listeleme, görüntüleme, güncelleme ve silme (CRUD)
