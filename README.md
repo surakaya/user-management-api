@@ -1,129 +1,145 @@
 # Backend Validation API
 
-Express.js ve TypeScript kullanılarak geliştirilmiş, kullanıcı yönetimi için REST API sunan bir backend projesidir. Proje; veri doğrulama, merkezi hata yönetimi, otomatik testler, Docker ile container ortamında çalıştırma ve CI/CD süreçlerini uygulamalı olarak öğrenmek amacıyla geliştirilmiştir.
+Express.js ve TypeScript ile geliştirilmiş, kullanıcı yönetimi için REST API sunan bir backend projesidir. Proje boyunca mevcut API üzerinde otomatik test, veri doğrulama, merkezi hata yönetimi, logging, temel güvenlik önlemleri, rate limiting, health check, Docker, CI kontrolleri ve deployment çalışmaları yapılmıştır. Ayrıca Prometheus ve Grafana ile yerel metrik izleme ortamı yapılandırılmıştır.
 
-## Dağıtım (Deployment)
+## İçindekiler
 
-API, [Render]([https://render.com/](https://user-management-api-g44x.onrender.com)) platformunda yayınlanmıştır.
+- [Özellikler](#özellikler)
+- [Teknoloji Yığını](#teknoloji-yığını)
+- [Proje Yapısı](#proje-yapısı)
+- [Gereksinimler](#gereksinimler)
+- [Kurulum ve Yerel Çalıştırma](#kurulum-ve-yerel-çalıştırma)
+- [API Endpoint'leri](#api-endpointleri)
+- [Doğrulama ve Hata Yönetimi](#doğrulama-ve-hata-yönetimi)
+- [Logging ve Metrikler](#logging-ve-metrikler)
+- [Prometheus ve Grafana ile İzleme](#prometheus-ve-grafana-ile-izleme)
+- [Test, Tip Kontrolü ve Build](#test-tip-kontrolü-ve-build)
+- [Docker](#docker)
+- [CI/CD](#cicd)
+- [Deployment](#deployment)
+- [Sınırlamalar](#sınırlamalar)
 
-Uygulama, Render servisi çalışır durumdayken kendisine ait URL üzerinden erişilebilir.
+## Özellikler
 
-### Dağıtım Sonrası Kontroller
+- Kullanıcı oluşturma, listeleme, görüntüleme, güncelleme ve silme işlemleri (CRUD)
+- Kullanıcı kimlikleri için UUID
+- Zod ile oluşturma ve güncelleme isteklerinin doğrulanması
+- Özel `AppError` sınıfı ve merkezi hata yönetimi
+- HTTP istekleri için yapılandırılmış log kaydı
+- Helmet ile temel HTTP güvenlik başlıkları
+- CORS yapılandırması
+- `express-rate-limit` ile istek sıklığını sınırlama
+- `GET /health` ile temel sağlık kontrolü
+- `GET /metrics` ile Prometheus formatında metrik sunma
+- `prom-client` ile varsayılan Node.js metrikleri, HTTP istek sayacı ve istek süresi histogramı
+- Prometheus ile metrik toplama
+- Grafana ile Prometheus metriklerini görselleştirmek için yerel izleme ortamı
+- Vitest ve Supertest ile otomatik testler
+- Docker image ve container oluşturma
+- GitHub Actions ile otomatik test, TypeScript kontrolü ve build
+- Render üzerinde API deployment'ı
 
-Yayınlanan uygulamanın erişilebilir ve çalışır durumda olduğunu kontrol etmek için aşağıdaki endpoint'ler kullanılabilir:
-
-- `GET /health` — uygulamanın sağlık kontrolü endpoint'ini kontrol eder. 
-- `GET /users` — kullanıcı API'sinin yanıt verdiğini doğrular.
-
-Bu kontroller, dağıtılan uygulamanın erişilebilir olduğunu ve beklenen şekilde yanıt verdiğini doğrulamaya yardımcı olur.
-
-### Önemli Notlar
-
-- Kullanıcı verileri bellekte tutulur. Sunucu yeniden başlatıldığında bu veriler kaybolabilir.
-- Render servisi, ihtiyaç duyulmadığında geçici olarak durdurulabilir.
-- Servis durdurulduğunda herkese açık API adresine erişilemeyebilir.
-
-
-## Features
-
-- RESTful API ile kullanıcı oluşturma, listeleme, görüntüleme, güncelleme ve silme (CRUD)
-- UUID ile benzersiz kullanıcı kimlikleri oluşturma
-- Zod ile istek verilerini doğrulama
-- Merkezi hata yönetimi ve özel `AppError` sınıfı
-- HTTP istekleri için logging
-- Helmet ve CORS ile temel güvenlik yapılandırması
-- Rate limiting ile istek sıklığını sınırlandırma
-- `/health` endpoint'i ile uygulama durumunu kontrol etme
-- Vitest ile otomatik testler
-- Docker ile container oluşturma ve çalıştırma
-- GitHub Actions ile otomatik test ve kod kontrolleri
-- Render üzerinde deployment
-
-## Tech Stack
+## Teknoloji Yığını
 
 | Teknoloji | Kullanım amacı |
 |---|---|
-| Node.js | JavaScript çalışma ortamı |
-| Express.js | HTTP sunucusu ve API routing |
-| TypeScript | Tip güvenliği ve daha kontrollü geliştirme |
+| Node.js 22 | JavaScript çalışma ortamı |
+| Express.js 5 | HTTP sunucusu, middleware ve API routing |
+| TypeScript | Statik tip kontrolü |
 | Zod | İstek verilerinin doğrulanması |
-| Vitest | Otomatik testler |
+| Vitest | Otomatik testlerin çalıştırılması |
+| Supertest | HTTP endpoint'lerinin test edilmesi |
+| Helmet | HTTP güvenlik başlıklarının yapılandırılması |
+| CORS | Cross-origin istek politikasının belirlenmesi |
+| express-rate-limit | İstek sıklığının sınırlandırılması |
+| prom-client | Uygulama metriklerinin toplanması ve `/metrics` üzerinden sunulması |
+| Prometheus | Metriklerin belirli aralıklarla toplanması ve sorgulanması |
+| Grafana | Metriklerin panolarda görselleştirilmesi |
 | Docker | Uygulamayı container içinde çalıştırma |
-| GitHub Actions | CI sürecini otomatikleştirme |
-| Render | Uygulamayı yayınlama |
+| Docker Compose | Prometheus ve Grafana servislerini birlikte çalıştırma |
+| GitHub Actions | CI kontrollerinin otomatikleştirilmesi |
+| Render | API'nin yayınlanması |
 
-## Project Structure
+## Proje Yapısı
 
 ```text
-backend-validation/
-├── src/
-│   ├── index.ts
-│   ├── user.routes.ts
-│   ├── user.schema.ts
-│   ├── errors.ts
-│   ├── types.ts
-│   └── data.ts
+user-management-api/
 ├── .github/
 │   └── workflows/
-├── Dockerfile
+│       └── ci.yml
+├── monitoring/
+│   └── prometheus.yml
+├── src/
+│   ├── data.ts
+│   ├── errors.ts
+│   ├── index.ts
+│   ├── server.ts
+│   ├── types.ts
+│   ├── user.integration.test.ts
+│   ├── user.routes.ts
+│   ├── user.schema.ts
+│   └── zod.test.ts
 ├── .dockerignore
+├── .gitignore
+├── docker-compose.yml
+├── Dockerfile
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
 └── README.md
 ```
 
-`src/index.ts` uygulamayı başlatır ve middleware yapılandırmasını içerir. `user.routes.ts` kullanıcı endpoint'lerini, `user.schema.ts` doğrulama şemalarını, `errors.ts` özel hata sınıfını, `types.ts` TypeScript tiplerini ve `data.ts` bellek içi kullanıcı verilerini tanımlar.
+- `src/index.ts`: Portu belirleyerek uygulama sunucusunu başlatır.
+- `src/server.ts`: Express uygulamasını, middleware'leri, health check'i, Prometheus metriklerini ve merkezi hata yönetimini yapılandırır.
+- `src/user.routes.ts`: Kullanıcı CRUD endpoint'lerini tanımlar.
+- `src/user.schema.ts`: Kullanıcı oluşturma ve güncelleme için Zod şemalarını içerir.
+- `src/errors.ts`: `AppError` hata sınıfını tanımlar.
+- `src/types.ts`: Kullanıcı veri tipini tanımlar.
+- `src/data.ts`: Başlangıç kullanıcılarını ve bellek içi kullanıcı listesini tutar.
+- `src/zod.test.ts`: Zod doğrulama mantığı için temel birim testlerini içerir.
+- `src/user.integration.test.ts`: Supertest ile API endpoint'lerine yönelik entegrasyon testlerini içerir.
+- `monitoring/prometheus.yml`: Prometheus'un scrape aralığını ve API hedefini tanımlar.
+- `docker-compose.yml`: Prometheus ve Grafana servislerini, portlarını ve veri volume'lerini tanımlar.
+- `.github/workflows/ci.yml`: Push ve pull request olaylarında test, tip kontrolü ve build adımlarını çalıştırır.
 
-## Getting Started
+## Gereksinimler
 
-### Prerequisites
+- Node.js 22 ve npm
+- Docker Desktop veya Docker Engine ve Docker Compose (Prometheus/Grafana ortamı için)
 
-- Node.js
-- npm
-- Docker (container içinde çalıştırmak için)
+## Kurulum ve Yerel Çalıştırma
 
-### Installation
-
-Depoyu bilgisayarına klonla ve proje dizinine gir:
+Depoyu klonlayıp bağımlılıkları yükle:
 
 ```bash
 git clone https://github.com/surakaya/user-management-api.git
-cd backend-validation
-npm install
+cd user-management-api
+npm ci
 ```
 
-### Run in Development
+Geliştirme sunucusunu başlat:
 
 ```bash
 npm run dev
 ```
 
-Geliştirme sunucusu `tsx watch` ile çalışır. Kaynak kodda yapılan değişiklikler geliştirme sürecinde otomatik olarak yeniden yüklenir.
+API varsayılan olarak `http://localhost:3000` adresinde dinler. Port, `PORT` ortam değişkeniyle değiştirilebilir.
 
-Yerel API varsayılan olarak `http://localhost:3000` adresinde kullanılabilir.
-
-## API Endpoints
-
-### Health Check
+## API Endpoint'leri
 
 | Method | Endpoint | Açıklama |
 |---|---|---|
-| GET | `/health` | Uygulamanın durumunu kontrol eder. |
-
-### User Management
-
-| Method | Endpoint | Açıklama |
-|---|---|---|
+| GET | `/health` | Uygulamanın çalışır durumda olduğunu belirten temel yanıtı döndürür. |
+| GET | `/metrics` | Prometheus'un okuyabileceği metrik çıktısını döndürür. |
 | POST | `/users` | Yeni kullanıcı oluşturur. |
-| GET | `/users` | Kullanıcıları listeler. |
-| GET | `/users/:id` | ID ile kullanıcı getirir. |
+| GET | `/users` | Kullanıcı listesini döndürür. |
+| GET | `/users/:id` | Belirtilen ID'ye sahip kullanıcıyı döndürür. |
 | PATCH | `/users/:id` | Kullanıcı bilgilerini kısmi olarak günceller. |
 | DELETE | `/users/:id` | Kullanıcıyı siler. |
 
-### Create User
+### Kullanıcı oluşturma örneği
 
-**Request**
+İstek:
 
 ```http
 POST /users
@@ -138,28 +154,12 @@ Content-Type: application/json
 }
 ```
 
-Başarılı oluşturma işleminde API `201 Created` durum koduyla oluşturulan kullanıcıyı döndürür.
+Başarılı oluşturma işlemi `201 Created` durum kodu ile oluşturulan kullanıcıyı döndürür. Kullanıcı kimliği sunucu tarafında UUID olarak oluşturulur.
 
-### Get Users
-
-```http
-GET /users
-```
-
-Kayıtlı kullanıcıları JSON formatında döndürür.
-
-### Get User by ID
+### Kullanıcı güncelleme örneği
 
 ```http
-GET /users/:id
-```
-
-Belirtilen UUID ile eşleşen kullanıcıyı getirir. Kullanıcı bulunamazsa `404 Not Found` yanıtı döndürülür.
-
-### Update User
-
-```http
-PATCH /users/:id
+PATCH /users/<user-uuid>
 Content-Type: application/json
 ```
 
@@ -169,117 +169,207 @@ Content-Type: application/json
 }
 ```
 
-Yalnızca gönderilen alanlar güncellenir. İstek verileri Zod şemasıyla doğrulanır.
+PATCH isteğinde yalnızca güncellenecek alanların gönderilmesi yeterlidir.
 
-### Delete User
+### Yanıtlar ve sınırlar
 
-```http
-DELETE /users/:id
+- Geçersiz istek verisi için `400 Bad Request` döndürülür.
+- Kullanıcı bulunamazsa `404 Not Found` döndürülür.
+- Başarılı silme işlemi `204 No Content` döndürür.
+- Mevcut rate-limit yapılandırması `/users` rotasına 15 dakikalık pencere başına 5 istek sınırı uygular.
+
+## Doğrulama ve Hata Yönetimi
+
+Kullanıcı oluşturma ve güncelleme istekleri Zod şemalarıyla doğrulanır. `name` boş olamaz, `email` geçerli bir e-posta biçiminde olmalıdır ve `age` pozitif bir tam sayı olmalıdır. Güncelleme şeması, oluşturma şemasının alanlarını isteğe bağlı hâle getirerek kısmi güncellemeye izin verir.
+
+`AppError`, uygulamaya özgü hataların HTTP durum kodu ve hata koduyla ifade edilmesini sağlar. Merkezi hata middleware'i bu hataları ortak bir yerde işler; beklenmeyen hatalar loglanır ve `500 Internal Server Error` yanıtıyla karşılanır.
+
+## Logging ve Metrikler
+
+HTTP istek middleware'i yanıt tamamlandığında istek method'unu, rotayı, HTTP durum kodunu ve yanıt süresini loglar. Aynı middleware, Prometheus için aşağıdaki metrikleri günceller:
+
+- `http_requests_total`: HTTP isteklerinin toplam sayısını ölçen sayaç. `method`, `route` ve `status_code` etiketlerini içerir.
+- `http_request_duration_seconds`: İstek sürelerini saniye cinsinden ölçen histogram. Aynı etiketlerle kaydedilir.
+- `prom-client` tarafından toplanan varsayılan Node.js metrikleri.
+
+Metrikler `GET /metrics` endpoint'i üzerinden sunulur. API çalışırken çıktıyı kontrol etmek için:
+
+```bash
+curl http://localhost:3000/metrics
 ```
 
-Başarılı silme işleminde API `204 No Content` durum kodunu döndürür.
+## Prometheus ve Grafana ile İzleme
 
-## Validation and Error Handling
+Depodaki Docker Compose yapılandırması Prometheus ve Grafana'yı yerel izleme ortamı olarak çalıştırır. `docker-compose.yml` dosyası API container'ını başlatmaz; API'yi ayrıca yerel geliştirme süreciyle çalıştırmak gerekir.
 
-İstek gövdeleri Zod şemalarıyla doğrulanır. Geçersiz kullanıcı bilgileri için `400 Bad Request`, bulunamayan kullanıcılar için `404 Not Found` kullanılır.
+### 1. API'yi başlat
 
-`AppError` sınıfı, uygulamaya özgü hataların HTTP durum kodlarıyla ifade edilmesini sağlar. Merkezi hata yönetimi middleware'i hataları ortak bir noktadan ele alır. Beklenmeyen sunucu hataları `500 Internal Server Error` durum koduyla yanıtlanır.
+Proje kök dizininde ilk terminalde:
 
-## Testing
+```bash
+npm run dev
+```
 
-Proje, Vitest kullanılarak otomatik testlerle kontrol edilir.
+API'nin metrik endpoint'inden yanıt geldiğini kontrol et:
 
-Testleri çalıştırmak için:
+```bash
+curl http://localhost:3000/metrics
+```
+
+### 2. Prometheus ve Grafana'yı başlat
+
+İkinci terminalde proje kök dizininde:
+
+```bash
+docker compose up -d
+```
+
+Arayüzler:
+
+- Prometheus: [http://localhost:9090](http://localhost:9090)
+- Grafana: [http://localhost:3001](http://localhost:3001)
+
+`monitoring/prometheus.yml` yapılandırmasında scrape aralığı 5 saniyedir. `backend-validation` işi, host makinede 3000 portunda çalışan API'nin `/metrics` endpoint'ini `host.docker.internal:3000` hedefinden izler. Bu hedef Docker Desktop kullanan macOS ortamına uygundur; farklı işletim sistemlerinde hedef yapılandırması değişiklik gerektirebilir.
+
+### 3. Prometheus hedefini ve metrikleri kontrol et
+
+Prometheus arayüzünde **Status → Targets** bölümünü açıp `backend-validation` hedefinin `UP` durumda olduğunu doğrula. Veri oluşması için API'ye birkaç istek gönder:
+
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/users
+```
+
+Prometheus'un **Graph** bölümünde aşağıdaki PromQL sorgularını deneyebilirsin:
+
+Toplam HTTP istek sayaçları:
+
+```promql
+http_requests_total
+```
+
+Dakikadaki istek hızını hesaplama:
+
+```promql
+rate(http_requests_total[1m])
+```
+
+Rotalara ve durum kodlarına göre istek hızını karşılaştırma:
+
+```promql
+sum(rate(http_requests_total[1m])) by (method, route, status_code)
+```
+
+95. yüzdelik istek süresini histogram üzerinden tahmin etme:
+
+```promql
+histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+```
+
+### 4. Grafana'yı Prometheus'a bağla
+
+1. Grafana'yı [http://localhost:3001](http://localhost:3001) adresinde aç.
+2. Compose dosyasında özel bir Grafana kullanıcı/parola değişkeni tanımlanmadığı için ilk girişte varsayılan `admin` / `admin` bilgileri kullanılabilir; Grafana parola değiştirmeni isteyebilir.
+3. **Connections → Data sources** (sürüme göre menü adı değişebilir) bölümünden **Add data source** seç ve **Prometheus**'u ekle.
+4. URL alanına `http://prometheus:9090` yaz. Grafana container'ı Prometheus'a Docker Compose servis adı üzerinden erişir.
+5. **Save & test** ile bağlantıyı doğrula.
+6. Bir dashboard oluşturup panel sorgularına yukarıdaki PromQL ifadelerini ekleyebilirsin.
+
+Not: Mevcut Compose dosyası Grafana ve Prometheus servislerini ve veri volume'lerini tanımlar. Dashboard'lar veya paneller depodan otomatik provision edilmez; bunları Grafana arayüzünde ayrıca oluşturmak gerekir.
+
+### 5. İzleme servislerini durdurma
+
+```bash
+docker compose down
+```
+
+Bu komut container'ları durdurup kaldırır, ancak isimlendirilmiş volume'leri korur. İzleme verilerini de silmek için ayrıca `docker compose down -v` kullanılabilir; bu komut Prometheus ve Grafana volume'lerindeki verileri de siler.
+
+## Test, Tip Kontrolü ve Build
+
+Otomatik testleri çalıştır:
 
 ```bash
 npm test
 ```
 
-TypeScript tip kontrolü için:
+TypeScript tip kontrolünü çalıştır:
 
 ```bash
 npm run typecheck
 ```
 
-Production çıktısını oluşturmak için:
+Production JavaScript çıktısını oluştur:
 
 ```bash
 npm run build
 ```
 
-Bu komutlar sırasıyla otomatik testleri çalıştırır, tip hatalarını kontrol eder ve TypeScript kodunu `dist` dizinine derler.
+Build sonrasında derlenmiş uygulamayı başlatmak için:
+
+```bash
+npm start
+```
+
+Testler Vitest ile çalışır; endpoint testlerinde Supertest, doğrulama testlerinde ise doğrudan Zod şemaları kullanılır.
 
 ## Docker
 
-Uygulamayı Docker image'ı olarak oluşturmak için proje kök dizininde:
+API için Docker image oluştur:
 
 ```bash
 docker build -t backend-validation-api .
 ```
 
-Container'ı başlatmak için:
+Container'ı başlat:
 
 ```bash
-docker run -d \
-  --name backend-validation-prod \
-  -p 3000:3000 \
-  backend-validation-api
+docker run -d --name backend-validation-prod -p 3000:3000 backend-validation-api
 ```
 
-Container durumunu kontrol etmek için:
+Container durumunu ve loglarını kontrol et:
 
 ```bash
 docker ps
-```
-
-Uygulamanın health check endpoint'ini test etmek için:
-
-```bash
-curl http://localhost:3000/health
-```
-
-Container loglarını görüntülemek için:
-
-```bash
 docker logs backend-validation-prod
 ```
 
-Container'ı durdurmak için:
+Container'ı durdur:
 
 ```bash
 docker stop backend-validation-prod
 ```
 
-> Docker komutlarındaki port eşlemesi, Dockerfile ve uygulamanın dinlediği port ile uyumlu olmalıdır.
+Health check endpoint'ini denemek için:
+
+```bash
+curl http://localhost:3000/health
+```
+
+API'yi bu şekilde container içinde çalıştırdığında, Prometheus yapılandırmasındaki `host.docker.internal:3000` hedefi de API'nin host portundan erişilebilir olmasını bekler. Aynı portu kullanan yerel sunucu ile container'ı aynı anda başlatmamaya dikkat et.
 
 ## CI/CD
 
-GitHub Actions, kod deposuna gönderilen değişiklikler üzerinde otomatik kontroller çalıştırmak için kullanılır.
+`.github/workflows/ci.yml` workflow'u `main` dalına push edildiğinde veya `main` dalını hedefleyen bir pull request açıldığında çalışır. Node.js 22 ortamında bağımlılıkları `npm ci` ile yükler ve şu kontrolleri yürütür:
 
-CI sürecinde testlerin, TypeScript tip kontrolünün ve yapılandırılmış build adımlarının başarılı olması hedeflenir. Böylece hataların uygulama yayınlanmadan önce tespit edilmesi kolaylaşır.
+1. `npm test`
+2. `npm run typecheck`
+3. `npm run build`
+
+Bu yapılandırma Continuous Integration (CI) kontrollerini otomatikleştirir. Workflow dosyasında Render'a otomatik deployment adımı bulunmadığından, CI'ı tam otomatik CD süreciyle karıştırmamak gerekir.
 
 ## Deployment
 
-Uygulama Render üzerinde yayınlanmıştır. Yerel geliştirme ortamından farklı olarak deployment ortamında uygulama, hosting platformunun sağladığı çalışma ortamında çalışır.
+API, Render üzerinde yayınlanmıştır: [Backend Validation API](https://user-management-api-g44x.onrender.com).
 
-Deployment sonrasında `/health` ve `/users` endpoint'leri üzerinden temel smoke testler gerçekleştirilebilir.
+Servis aktif olduğunda temel smoke test için `/health` ve `/users` endpoint'leri kullanılabilir. Render servisi durdurulduğunda veya uyku durumundayken herkese açık URL hemen yanıt vermeyebilir.
 
-## Limitations
+Prometheus ve Grafana yapılandırması yerel Docker Compose izleme ortamı içindir; Compose dosyası bu servisleri Render'a deploy etmez.
 
-- Kullanıcı verileri şu anda bellekte tutulan bir dizide saklanır.
-- Kalıcı bir veritabanı kullanılmamaktadır.
-- Sunucu yeniden başlatıldığında kullanıcı verileri sıfırlanabilir.
-- Kalıcı veri saklama, kimlik doğrulama ve yetkilendirme bu projenin mevcut kapsamına dahil değildir.
+## Sınırlamalar
 
-## Learning Objectives
-
-Bu proje kapsamında aşağıdaki backend geliştirme konularının uygulamalı olarak öğrenilmesi hedeflenmiştir:
-
-- REST API tasarımı ve CRUD işlemleri
-- İstek doğrulama ve hata yönetimi
-- Unit test ve integration test yaklaşımı
-- Docker image ve container kavramları
-- Logging ve temel API güvenliği
-- Rate limiting ve health check
-- CI/CD süreçleri ve GitHub Actions
-- Deployment ve production ortamı kavramları
+- Kullanıcılar kalıcı bir veritabanında değil, bellek içinde tutulan bir dizide saklanır. Uygulama yeniden başlatıldığında veriler sıfırlanabilir.
+- Kimlik doğrulama ve yetkilendirme bu projenin kapsamına dahil değildir.
+- `/health` temel bir liveness benzeri kontroldür; veritabanı veya başka bağımlılıklar için readiness kontrolü yapmaz.
+- Grafana dashboard'ları depoda otomatik provision edilmez; arayüzden ayrıca oluşturulmaları gerekir.
+- GitHub Actions workflow'u test, tip kontrolü ve build çalıştırır; otomatik deployment yapmaz.
